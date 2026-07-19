@@ -1,0 +1,493 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  OWNER
+  STAFF
+  ADMIN
+}
+
+enum AgencyRole {
+  OWNER
+  STAFF
+}
+
+enum AgencyStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+}
+
+enum ThemePreset {
+  ELEGANT
+  MINIMAL
+  SPORT
+  LUXURY
+}
+
+enum ThemeVersionStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum BorderRadius {
+  SMALL
+  MEDIUM
+  LARGE
+}
+
+enum VehicleStatus {
+  AVAILABLE
+  RESERVED
+  RENTED
+  MAINTENANCE
+  UNAVAILABLE
+  ARCHIVED
+}
+
+enum Transmission {
+  MANUAL
+  AUTOMATIC
+}
+
+enum FuelType {
+  GASOLINE
+  DIESEL
+  HYBRID
+  ELECTRIC
+  LPG
+}
+
+enum ReservationStatus {
+  NEW
+  PENDING
+  CONFIRMED
+  DECLINED
+  CANCELLED
+  COMPLETED
+}
+
+enum VerificationPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+  REVOKED
+}
+
+model User {
+  id                  String                     @id @default(uuid()) @db.Char(36)
+  name                String?
+  email               String                     @unique
+  emailVerified       DateTime?
+  image               String?
+  passwordHash        String?
+  role                UserRole                   @default(OWNER)
+  preferredLocale     String                     @default("fr")
+  accounts            Account[]
+  sessions            Session[]
+  ownedAgencies       Agency[]                   @relation("AgencyOwner")
+  memberships         AgencyMember[]
+  createdVehicles     Vehicle[]                  @relation("VehicleCreator")
+  createdReservations Reservation[]              @relation("ReservationCreator")
+  createdThemes       ThemeConfiguration[]       @relation("ThemeCreator")
+  notifications       Notification[]
+  auditLogs           AuditLog[]                 @relation("AuditActor")
+  reservationChanges  ReservationStatusHistory[] @relation("ReservationStatusActor")
+  vehicleChanges      VehicleStatusHistory[]     @relation("VehicleStatusActor")
+  sentInvitations     AgencyInvitation[]         @relation("InvitationSender")
+  createdAt           DateTime                   @default(now())
+  updatedAt           DateTime                   @updatedAt
+}
+
+model Account {
+  id                String  @id @default(uuid()) @db.Char(36)
+  userId            String  @db.Char(36)
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(uuid()) @db.Char(36)
+  sessionToken String   @unique
+  userId       String   @db.Char(36)
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String              @unique
+  expires    DateTime
+  purpose    VerificationPurpose @default(EMAIL_VERIFICATION)
+
+  @@unique([identifier, token])
+  @@index([identifier, purpose])
+}
+
+model Agency {
+  id                 String                     @id @default(uuid()) @db.Char(36)
+  ownerId            String                     @db.Char(36)
+  name               String
+  slug               String                     @unique
+  customDomain       String?                    @unique
+  description        String?                    @db.Text
+  status             AgencyStatus               @default(DRAFT)
+  onboardingStep     Int                        @default(1)
+  owner              User                       @relation("AgencyOwner", fields: [ownerId], references: [id], onDelete: Restrict)
+  members            AgencyMember[]
+  settings           AgencySettings?
+  themes             ThemeConfiguration[]
+  vehicles           Vehicle[]
+  vehicleImages      VehicleImage[]
+  vehicleFeatures    VehicleFeature[]
+  availabilityBlocks VehicleAvailabilityBlock[]
+  customers          Customer[]
+  reservations       Reservation[]
+  reservationHistory ReservationStatusHistory[]
+  vehicleHistory     VehicleStatusHistory[]
+  notifications      Notification[]
+  auditLogs          AuditLog[]
+  invitations        AgencyInvitation[]
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@index([ownerId])
+  @@index([status])
+}
+
+model AgencyMember {
+  id          String     @id @default(uuid()) @db.Char(36)
+  agencyId    String     @db.Char(36)
+  userId      String     @db.Char(36)
+  role        AgencyRole
+  permissions Json       @default("[]")
+  isActive    Boolean    @default(true)
+  agency      Agency     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([agencyId, userId])
+  @@index([userId, isActive])
+}
+
+model AgencySettings {
+  id              String   @id @default(uuid()) @db.Char(36)
+  agencyId        String   @unique @db.Char(36)
+  address         String?
+  city            String?
+  country         String?
+  latitude        Decimal? @db.Decimal(10, 7)
+  longitude       Decimal? @db.Decimal(10, 7)
+  phone           String?
+  contactEmail    String?
+  openingHours    Json?
+  logoUrl         String?
+  logoPublicId    String?
+  faviconUrl      String?
+  faviconPublicId String?
+  coverUrl        String?
+  coverPublicId   String?
+  locale          String   @default("fr")
+  currency        String   @default("EUR")
+  timezone        String   @default("Africa/Casablanca")
+  seoTitle        String?
+  seoDescription  String?  @db.Text
+  seoKeywords     Json     @default("[]")
+  agency          Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+}
+
+model ThemeConfiguration {
+  id              String             @id @default(uuid()) @db.Char(36)
+  agencyId        String             @db.Char(36)
+  createdById     String?            @db.Char(36)
+  version         Int
+  status          ThemeVersionStatus @default(DRAFT)
+  preset          ThemePreset        @default(MINIMAL)
+  primaryColor    String             @default("#0F766E")
+  secondaryColor  String             @default("#0F172A")
+  accentColor     String             @default("#F59E0B")
+  backgroundColor String             @default("#FFFFFF")
+  textColor       String             @default("#0F172A")
+  headingFont     String             @default("Manrope")
+  bodyFont        String             @default("Inter")
+  radius          BorderRadius       @default(MEDIUM)
+  buttonStyle     String             @default("solid")
+  cardStyle       String             @default("elevated")
+  navigationStyle String             @default("floating")
+  spacingScale    String             @default("comfortable")
+  heroEyebrow     String?
+  heroTitle       String?
+  heroDescription String?            @db.Text
+  visibleSections Json
+  sectionOrder    Json
+  publishedAt     DateTime?
+  agency          Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdBy       User?              @relation("ThemeCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@unique([agencyId, version])
+  @@index([agencyId, status])
+}
+
+model Vehicle {
+  id                 String                     @id @default(uuid()) @db.Char(36)
+  agencyId           String                     @db.Char(36)
+  createdById        String?                    @db.Char(36)
+  slug               String
+  brand              String
+  model              String
+  year               Int
+  licensePlate       String
+  category           String
+  transmission       Transmission
+  fuelType           FuelType
+  seats              Int
+  doors              Int
+  mileage            Int                        @default(0)
+  color              String
+  dailyPrice         Decimal                    @db.Decimal(10, 2)
+  weeklyPrice        Decimal?                   @db.Decimal(10, 2)
+  deposit            Decimal                    @default(0) @db.Decimal(10, 2)
+  description        String                     @db.Text
+  rentalConditions   String?                    @db.Text
+  status             VehicleStatus              @default(AVAILABLE)
+  totalQuantity      Int                        @default(1)
+  location           String
+  availableFrom      DateTime?
+  isFeatured         Boolean                    @default(false)
+  isArchived         Boolean                    @default(false)
+  popularity         Int                        @default(0)
+  agency             Agency                     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  createdBy          User?                      @relation("VehicleCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  images             VehicleImage[]
+  features           VehicleFeature[]
+  availabilityBlocks VehicleAvailabilityBlock[]
+  reservations       Reservation[]
+  statusHistory      VehicleStatusHistory[]
+  createdAt          DateTime                   @default(now())
+  updatedAt          DateTime                   @updatedAt
+
+  @@unique([agencyId, slug])
+  @@unique([agencyId, licensePlate])
+  @@index([agencyId, status, isArchived])
+  @@index([agencyId, category])
+  @@index([agencyId, dailyPrice])
+  @@index([agencyId, createdAt])
+}
+
+model VehicleImage {
+  id        String   @id @default(uuid()) @db.Char(36)
+  agencyId  String   @db.Char(36)
+  vehicleId String   @db.Char(36)
+  url       String
+  publicId  String?
+  alt       String?
+  position  Int      @default(0)
+  isPrimary Boolean  @default(false)
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vehicleId, position])
+  @@index([agencyId, vehicleId])
+}
+
+model VehicleFeature {
+  id        String   @id @default(uuid()) @db.Char(36)
+  agencyId  String   @db.Char(36)
+  vehicleId String   @db.Char(36)
+  name      String
+  icon      String?
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([vehicleId, name])
+  @@index([agencyId])
+}
+
+model VehicleAvailabilityBlock {
+  id        String   @id @default(uuid()) @db.Char(36)
+  agencyId  String   @db.Char(36)
+  vehicleId String   @db.Char(36)
+  startsAt  DateTime
+  endsAt    DateTime
+  quantity  Int      @default(1)
+  reason    String
+  notes     String?  @db.Text
+  agency    Agency   @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicle   Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agencyId, vehicleId, startsAt, endsAt])
+}
+
+model Customer {
+  id           String        @id @default(uuid()) @db.Char(36)
+  agencyId     String        @db.Char(36)
+  name         String
+  email        String
+  phone        String
+  locale       String        @default("fr")
+  agency       Agency        @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reservations Reservation[]
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  @@unique([agencyId, email])
+  @@index([agencyId, phone])
+}
+
+model Reservation {
+  id              String                     @id @default(uuid()) @db.Char(36)
+  agencyId        String                     @db.Char(36)
+  vehicleId       String                     @db.Char(36)
+  customerId      String                     @db.Char(36)
+  createdById     String?                    @db.Char(36)
+  reference       String                     @unique
+  status          ReservationStatus          @default(NEW)
+  startsAt        DateTime
+  endsAt          DateTime
+  pickupLocation  String
+  returnLocation  String
+  quantity        Int                        @default(1)
+  dailyRate       Decimal                    @db.Decimal(10, 2)
+  totalAmount     Decimal                    @db.Decimal(10, 2)
+  currency        String                     @default("EUR")
+  customerMessage String?                    @db.Text
+  internalNote    String?                    @db.Text
+  acceptedTermsAt DateTime
+  idempotencyKey  String?
+  agency          Agency                     @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicle         Vehicle                    @relation(fields: [vehicleId], references: [id], onDelete: Restrict)
+  customer        Customer                   @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  createdBy       User?                      @relation("ReservationCreator", fields: [createdById], references: [id], onDelete: SetNull)
+  history         ReservationStatusHistory[]
+  createdAt       DateTime                   @default(now())
+  updatedAt       DateTime                   @updatedAt
+
+  @@unique([agencyId, idempotencyKey])
+  @@index([agencyId, status, startsAt])
+  @@index([agencyId, vehicleId, startsAt, endsAt])
+  @@index([agencyId, createdAt])
+}
+
+model ReservationStatusHistory {
+  id            String             @id @default(uuid()) @db.Char(36)
+  agencyId      String             @db.Char(36)
+  reservationId String             @db.Char(36)
+  changedById   String?            @db.Char(36)
+  fromStatus    ReservationStatus?
+  toStatus      ReservationStatus
+  note          String?            @db.Text
+  agency        Agency             @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  reservation   Reservation        @relation(fields: [reservationId], references: [id], onDelete: Cascade)
+  changedBy     User?              @relation("ReservationStatusActor", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt     DateTime           @default(now())
+
+  @@index([agencyId, reservationId, createdAt])
+}
+
+model VehicleStatusHistory {
+  id          String         @id @default(uuid()) @db.Char(36)
+  agencyId    String         @db.Char(36)
+  vehicleId   String         @db.Char(36)
+  changedById String?        @db.Char(36)
+  fromStatus  VehicleStatus?
+  toStatus    VehicleStatus
+  reason      String?
+  agency      Agency         @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  vehicle     Vehicle        @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  changedBy   User?          @relation("VehicleStatusActor", fields: [changedById], references: [id], onDelete: SetNull)
+  createdAt   DateTime       @default(now())
+
+  @@index([agencyId, vehicleId, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(uuid()) @db.Char(36)
+  agencyId  String    @db.Char(36)
+  userId    String?   @db.Char(36)
+  title     String
+  body      String    @db.Text
+  type      String
+  href      String?
+  readAt    DateTime?
+  agency    Agency    @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([agencyId, userId, readAt])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid()) @db.Char(36)
+  agencyId   String?  @db.Char(36)
+  actorId    String?  @db.Char(36)
+  action     String
+  entityType String
+  entityId   String?
+  metadata   Json?
+  ipAddress  String?
+  userAgent  String?
+  agency     Agency?  @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  actor      User?    @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+  createdAt  DateTime @default(now())
+
+  @@index([agencyId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([entityType, entityId])
+}
+
+model AgencyInvitation {
+  id          String           @id @default(uuid()) @db.Char(36)
+  agencyId    String           @db.Char(36)
+  invitedById String           @db.Char(36)
+  email       String
+  role        AgencyRole       @default(STAFF)
+  permissions Json             @default("[]")
+  tokenHash   String           @unique
+  status      InvitationStatus @default(PENDING)
+  expiresAt   DateTime
+  agency      Agency           @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  invitedBy   User             @relation("InvitationSender", fields: [invitedById], references: [id], onDelete: Cascade)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@unique([agencyId, email, status])
+  @@index([email, status])
+}
