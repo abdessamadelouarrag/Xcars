@@ -1,0 +1,146 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #142321;
+  --card: #ffffff;
+  --card-foreground: #142321;
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --secondary: #edf4f2;
+  --secondary-foreground: #173a36;
+  --muted: #f2f5f4;
+  --muted-foreground: #667773;
+  --accent: #f4b942;
+  --accent-foreground: #352701;
+  --destructive: #dc2626;
+  --border: #dfe7e5;
+  --input: #cfdad7;
+  --ring: #0f766e;
+  --radius: 0.75rem;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --font-sans: "Inter", "Segoe UI", Arial, sans-serif;
+  --font-display: "Manrope", "Segoe UI", Arial, sans-serif;
+}
+
+.dark {
+  --background: #0c1211;
+  --foreground: #edf6f3;
+  --card: #121b19;
+  --card-foreground: #edf6f3;
+  --primary: #37c9b8;
+  --primary-foreground: #072925;
+  --secondary: #1a2926;
+  --secondary-foreground: #d9efea;
+  --muted: #16211f;
+  --muted-foreground: #96aaa5;
+  --accent: #f4b942;
+  --accent-foreground: #251b02;
+  --destructive: #ef4444;
+  --border: #263633;
+  --input: #334743;
+}
+
+* {
+  border-color: var(--border);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: "Inter", "Segoe UI", Arial, sans-serif;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+a,
+input,
+textarea,
+select {
+  outline-offset: 3px;
+}
+
+.form-select {
+  height: 2.75rem;
+  width: 100%;
+  border-radius: 0.75rem;
+  border: 1px solid var(--input);
+  background: var(--background);
+  padding: 0 0.875rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 150ms, box-shadow 150ms;
+}
+
+.form-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary) 15%, transparent);
+}
+
+.agency-site {
+  font-family: var(--agency-body);
+}
+
+.font-agency-heading {
+  font-family: var(--agency-heading);
+}
+
+.agency-card {
+  border: 1px solid color-mix(in srgb, var(--agency-text) 12%, transparent);
+  box-shadow: 0 14px 40px color-mix(in srgb, var(--agency-text) 8%, transparent);
+}
+
+.agency-input {
+  height: 3rem;
+  width: 100%;
+  border-radius: var(--agency-radius);
+  border: 1px solid color-mix(in srgb, var(--agency-text) 18%, transparent);
+  background: var(--agency-background);
+  padding: 0 0.875rem;
+  color: var(--agency-text);
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.agency-input:focus {
+  border-color: var(--agency-primary);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--agency-primary) 16%, transparent);
+}
+
+::selection {
+  background: color-mix(in srgb, var(--primary) 24%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
